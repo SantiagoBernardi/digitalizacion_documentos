@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@types/axios": "^0.14.4",
+    "@types/react-signature-canvas": "^1.0.7",
     "axios": "^1.7.9",
     "next": "15.1.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-signature-canvas": "^1.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
