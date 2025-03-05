@@ -6,10 +6,18 @@ export interface FileUploadOptions {
   signature?: string | null
   onProgress?: (progress: number) => void
 }
+export interface HttpBinResponse {
+  files: Record<string, string>
+  form: Record<string, string>
+  headers: Record<string, string>
+  json: null
+  origin: string
+  url: string
+}
 
 export interface FileUploadResult {
   fileUrls?: string[]
-  responseData?: any
+  responseData?: HttpBinResponse
 }
 
 export interface ServiceResponse<T> {
