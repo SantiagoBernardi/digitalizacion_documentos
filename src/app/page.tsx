@@ -1,66 +1,55 @@
 "use client"
 
 import { useState } from "react"
-import { uploadFileAndSignature } from "./services/uploadService"
-import FileUpload from "./components/FileUpload"
-import SignaturePadComponent from "./components/SignaturePad"
+
+import Form from "./components/Form"
+import Upload from "./components/Upload"
 
 export default function HomePage() {
-  const [file, setFile] = useState<File | null>(null)
-  const [signature, setSignature] = useState<string | null>(null)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle")
-
-  async function handleUpload() {
-    if (!file && !signature) return
-
-    setStatus("uploading")
-    setUploadProgress(0)
-
-    const result = await uploadFileAndSignature(file, signature, setUploadProgress)
-
-    if (result && result.success) {
-      setStatus("success")
-      setUploadProgress(100)
-    } else {
-      setStatus("error")
-      setUploadProgress(0)
-    }
-  }
+  const [activeTab, setActiveTab] = useState("upload")
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
-      <div className="w-full max-w-lg bg-white shadow-sm border border-gray-200 rounded-md p-6 space-y-6">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-4">Subir Documento</h1>
-
-        <div className="space-y-4">
-          <FileUpload onFileSelect={setFile} />
-          <SignaturePadComponent onSignatureSave={setSignature} />
+    <div className="container mx-auto py-6 px-4">
+      <div className="w-full max-w-3xl mx-auto">
+        {/* Tabs navigation */}
+        <div className="flex w-full mb-8 bg-gray-50 p-1 rounded-xl shadow-sm">
+          <button
+            onClick={() => setActiveTab("upload")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-center font-medium transition-all duration-200 ${
+              activeTab === "upload"
+                ? "bg-white text-primary rounded-lg shadow-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            }`}
+          >
+          
+            <span>Subir Documentos</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("form")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-center font-medium transition-all duration-200 ${
+              activeTab === "form"
+                ? "bg-white text-primary rounded-lg shadow-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            }`}
+          >
+           
+            <span>Formulario</span>
+          </button>
         </div>
 
-        {status === "uploading" && (
-          <div className="w-full my-4">
-            <div className="w-full bg-gray-200 rounded-full h-1.5">
-              <div
-                className="bg-blue-500 h-1.5 rounded-full transition-all duration-300 ease-in-out"
-                style={{ width: `${uploadProgress}%` }}
-              ></div>
+        {/* Tab content with fade transition */}
+        <div className="mt-4 transition-opacity duration-300">
+          {activeTab === "upload" && (
+            <div className="animate-fadeIn">
+              <Upload />
             </div>
-            <p className="text-right text-xs text-gray-500 mt-1">{uploadProgress}%</p>
-          </div>
-        )}
-
-        <button
-          onClick={handleUpload}
-          className="w-full bg-blue-600 text-white font-medium py-2 px-4 rounded hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-        >
-          Subir
-        </button>
-
-        {status === "success" && <p className="text-sm text-green-600 font-medium">Documento subido exitosamente.</p>}
-        {status === "error" && (
-          <p className="text-sm text-red-600 font-medium">Error al subir el documento. Intente nuevamente.</p>
-        )}
+          )}
+          {activeTab === "form" && (
+            <div className="animate-fadeIn">
+              <Form />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
