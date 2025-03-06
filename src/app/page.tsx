@@ -22,7 +22,7 @@ export default function HomePage() {
             }`}
           >
           
-            <span>Subir Documentos</span>
+            <span>Firmar documento</span>
           </button>
           <button
             onClick={() => setActiveTab("form")}

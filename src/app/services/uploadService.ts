@@ -6,18 +6,13 @@ export interface FileUploadOptions {
   signature?: string | null
   onProgress?: (progress: number) => void
 }
-export interface HttpBinResponse {
-  files: Record<string, string>
-  form: Record<string, string>
-  headers: Record<string, string>
-  json: null
-  origin: string
-  url: string
-}
 
 export interface FileUploadResult {
-  fileUrls?: string[]
-  responseData?: HttpBinResponse
+  success: boolean
+  message?: string
+  contratoPDF?: string
+  firmaIMG?: string
+  error?: string
 }
 
 export interface ServiceResponse<T> {
@@ -42,15 +37,20 @@ export async function uploadFileAndSignature({
   const formData = new FormData()
 
   try {
-    if (file) formData.append("files", file, file.name)
+    // Preparar los archivos para el backend
+    if (file) {
+      formData.append("files", file, file.name)
+    }
 
     if (signature) {
+      // Convertir la firma (data URL) a un Blob
       const response = await fetch(signature)
       const blob = await response.blob()
       formData.append("files", blob, "signature.png")
     }
 
-    const response = await axios.post("https://httpbin.org/post", formData, {
+    // Enviar al endpoint del backend
+    const response = await axios.post("http://localhost:3000/contratos/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
       onUploadProgress: (progressEvent) => {
         const progress = progressEvent.total ? Math.round((progressEvent.loaded * 100) / progressEvent.total) : 0
@@ -58,10 +58,14 @@ export async function uploadFileAndSignature({
       },
     })
 
+    // El backend devuelve un objeto JSON con información sobre los archivos procesados
     return {
       success: true,
       data: {
-        responseData: response.data,
+        success: true,
+        message: response.data.message || "Documento procesado correctamente",
+        contratoPDF: response.data.contratoPDF,
+        firmaIMG: response.data.firmaIMG,
       },
     }
   } catch (error) {
@@ -72,3 +76,4 @@ export async function uploadFileAndSignature({
     }
   }
 }
+
