@@ -2,12 +2,13 @@ import axios from "axios"
 
 // Tipos para la respuesta del backend
 export interface DNIData {
-  nombre: string
-  sexo: string
-  documento: string
-  fechaNacimiento: string
-  domicilio: string
-  lugarNacimiento: string
+  nombre?: string
+  apellido?: string
+  documento?: string
+  domicilio?: string
+  fechaNacimiento?: string
+  sexo?: string
+  lugarNacimiento?: string
 }
 
 export interface ServiceResponse<T> {
@@ -28,17 +29,30 @@ export async function extractDNIData(dniImage: File): Promise<ServiceResponse<DN
       },
     })
 
-    // La respuesta del backend viene como un string en el campo "response"
-    // Necesitamos parsearlo para obtener los datos estructurados
-    let dniData: DNIData
+    // Extraemos el contenido del campo "response"
+    const responseText = response.data.response
+    console.log("Respuesta del backend:", responseText)
 
+    // Intentamos parsear como JSON si es posible
+    let dniData: DNIData = {}
     try {
-      // Intentamos parsear el JSON si viene en formato JSON
-      dniData = JSON.parse(response.data.response)
+      dniData = JSON.parse(responseText)
     } catch (parseError) {
-      // Si no es un JSON válido, intentamos extraer los datos del texto
-      const textResponse = response.data.response
-      dniData = extractDataFromText(textResponse)
+      console.error("No se pudo parsear como JSON:", responseText)
+      // Si no es JSON, usamos el texto como está y asi mostramos el error de la ia en el campo nombre
+      dniData = {
+        nombre: responseText,
+      }
+    }
+
+    // Procesamiento de nombre y apellido
+    if (dniData.nombre && !dniData.apellido) {
+      const nombreCompleto = dniData.nombre.split(" ")
+      if (nombreCompleto.length > 1) {
+        // Asumimos que el primer término es el apellido
+        dniData.apellido = nombreCompleto[0]
+        dniData.nombre = nombreCompleto.slice(1).join(" ")
+      }
     }
 
     return {
@@ -53,57 +67,3 @@ export async function extractDNIData(dniImage: File): Promise<ServiceResponse<DN
     }
   }
 }
-
-// Función auxiliar para extraer datos de texto no estructurado
-function extractDataFromText(text: string): DNIData {
-  // Implementación básica para extraer datos de texto
-  // Esta función puede necesitar ajustes según el formato exacto de la respuesta
-  const lines = text.split("\n").map((line) => line.trim())
-
-  // Valores por defecto
-  const data: DNIData = {
-    nombre: "",
-    sexo: "",
-    documento: "",
-    fechaNacimiento: "",
-    domicilio: "",
-    lugarNacimiento: "",
-  }
-
-  // Buscar datos en el texto
-  for (const line of lines) {
-    if (line.includes("Nombre") || line.includes("NOMBRE")) {
-      data.nombre = line.split(":")[1]?.trim() || ""
-    } else if (line.includes("Sexo") || line.includes("SEXO")) {
-      data.sexo = line.split(":")[1]?.trim() || ""
-    } else if (line.includes("DNI") || line.includes("Documento")) {
-      data.documento = line.split(":")[1]?.trim() || ""
-    } else if (line.includes("Nacimiento") || line.includes("NACIMIENTO")) {
-      data.fechaNacimiento = line.split(":")[1]?.trim() || ""
-    } else if (line.includes("Domicilio") || line.includes("DOMICILIO")) {
-      data.domicilio = line.split(":")[1]?.trim() || ""
-    } else if (line.includes("Lugar") && line.includes("Nacimiento")) {
-      data.lugarNacimiento = line.split(":")[1]?.trim() || ""
-    }
-  }
-
-  return data
-}
-
-// Mock para pruebas
-export async function mockExtractDNIData(): Promise<ServiceResponse<DNIData>> {
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  return {
-    success: true,
-    data: {
-      nombre: "JUAN CARLOS PEREZ",
-      sexo: "M",
-      documento: "12345678",
-      fechaNacimiento: "01/01/1980",
-      domicilio: "AV. SIEMPREVIVA 742",
-      lugarNacimiento: "BUENOS AIRES",
-    },
-  }
-}
-

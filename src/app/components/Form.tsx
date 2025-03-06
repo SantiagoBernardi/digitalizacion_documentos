@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
-import { mockExtractDNIData } from "../services/formService"
+import { extractDNIData } from "../services/formService"
 
 const Form: React.FC = () => {
   const [name, setName] = useState("")
@@ -14,6 +14,7 @@ const Form: React.FC = () => {
   const [autoCompleteStatus, setAutoCompleteStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
   const [dniFile, setDniFile] = useState<File | null>(null)
   const [dniPreview, setDniPreview] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -33,29 +34,25 @@ const Form: React.FC = () => {
 
   async function handleAutoComplete() {
     if (!dniFile) {
-      alert("Por favor, sube una imagen de tu DNI primero")
+      setErrorMessage("Por favor, sube una imagen de tu DNI primero")
       return
     }
 
     setAutoCompleteStatus("loading")
+    setErrorMessage(null)
 
     try {
-      // En producción, usar extractDNIData en lugar de mockExtractDNIData
-      const response = await mockExtractDNIData()
+      // En producción, usar extractDNIData
+      const response = await extractDNIData(dniFile)
 
       if (response.success && response.data) {
         const dniData = response.data
 
-        // Separar nombre y apellido (asumiendo formato "APELLIDO NOMBRE")
-        const fullName = dniData.nombre.split(" ")
-        const extractedSurname = fullName[0] || ""
-        const extractedName = fullName.slice(1).join(" ") || ""
-
-        // Actualizar los campos del formulario
-        setName(extractedName)
-        setSurname(extractedSurname)
-        setDNI(dniData.documento)
-        setAddress(dniData.domicilio)
+        // Actualizar los campos del formulario con los datos extraídos
+        if (dniData.nombre) setName(dniData.nombre)
+        if (dniData.apellido) setSurname(dniData.apellido)
+        if (dniData.documento) setDNI(dniData.documento)
+        if (dniData.domicilio) setAddress(dniData.domicilio)
 
         setAutoCompleteStatus("success")
       } else {
@@ -64,6 +61,7 @@ const Form: React.FC = () => {
     } catch (error) {
       console.error("Error al autocompletar el formulario:", error)
       setAutoCompleteStatus("error")
+      setErrorMessage(error instanceof Error ? error.message : "Error al procesar el DNI")
     }
   }
 
@@ -71,6 +69,11 @@ const Form: React.FC = () => {
     const file = e.target.files?.[0] || null
 
     if (file) {
+      if (!file.type.startsWith("image/")) {
+        setErrorMessage("Por favor, selecciona una imagen válida")
+        return
+      }
+
       setDniFile(file)
 
       // Crear una URL para previsualizar la imagen
@@ -79,6 +82,7 @@ const Form: React.FC = () => {
 
       // Resetear el estado de autocompletado
       setAutoCompleteStatus("idle")
+      setErrorMessage(null)
     }
   }
 
@@ -121,6 +125,12 @@ const Form: React.FC = () => {
             )}
           </div>
         </div>
+
+        {errorMessage && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-600">{errorMessage}</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -201,7 +211,7 @@ const Form: React.FC = () => {
         {status === "success" && <p className="text-sm text-green-600 font-medium">Formulario enviado exitosamente.</p>}
         {status === "error" && <p className="text-sm text-red-600 font-medium">Error al enviar. Intente nuevamente.</p>}
 
-        {autoCompleteStatus === "error" && (
+        {autoCompleteStatus === "error" && !errorMessage && (
           <p className="text-sm text-red-600 font-medium">Error al autocompletar. Intente nuevamente.</p>
         )}
         {autoCompleteStatus === "success" && (
