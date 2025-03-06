@@ -1,11 +1,13 @@
 import axios from "axios"
 
-// Types
-export interface UserData {
-  name: string
-  surname: string
-  DNI: string
-  address: string
+// Tipos para la respuesta del backend
+export interface DNIData {
+  nombre: string
+  sexo: string
+  documento: string
+  fechaNacimiento: string
+  domicilio: string
+  lugarNacimiento: string
 }
 
 export interface ServiceResponse<T> {
@@ -14,47 +16,94 @@ export interface ServiceResponse<T> {
   error?: string
 }
 
-// Service implementation using axios
-export async function fetchUserData(): Promise<ServiceResponse<UserData>> {
+// Función para extraer datos de un DNI mediante imagen
+export async function extractDNIData(dniImage: File): Promise<ServiceResponse<DNIData>> {
   try {
-    // Real API endpoint
-    const response = await axios.get("https://api.example.com/user-data")
+    const formData = new FormData()
+    formData.append("file", dniImage)
+
+    const response = await axios.post<{ response: string }>("http://localhost:3000/contratos/extract/dni", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
+
+    // La respuesta del backend viene como un string en el campo "response"
+    // Necesitamos parsearlo para obtener los datos estructurados
+    let dniData: DNIData
+
+    try {
+      // Intentamos parsear el JSON si viene en formato JSON
+      dniData = JSON.parse(response.data.response)
+    } catch (parseError) {
+      // Si no es un JSON válido, intentamos extraer los datos del texto
+      const textResponse = response.data.response
+      dniData = extractDataFromText(textResponse)
+    }
 
     return {
       success: true,
-      data: response.data,
+      data: dniData,
     }
   } catch (error) {
-    console.error("Error fetching user data:", error)
+    console.error("Error extracting DNI data:", error)
     return {
       success: false,
-      error: axios.isAxiosError(error) ? error.message : "Unknown error",
+      error: axios.isAxiosError(error) ? error.message : "Error desconocido al procesar el DNI",
     }
   }
 }
 
-// Mock implementation for testing
-export async function mockFetchUserData(): Promise<ServiceResponse<UserData>> {
-  try {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+// Función auxiliar para extraer datos de texto no estructurado
+function extractDataFromText(text: string): DNIData {
+  // Implementación básica para extraer datos de texto
+  // Esta función puede necesitar ajustes según el formato exacto de la respuesta
+  const lines = text.split("\n").map((line) => line.trim())
 
-    // Return mock data as if it came from axios
-    return {
-      success: true,
-      data: {
-        name: "Juan",
-        surname: "Pérez",
-        DNI: "12345678",
-        address: "Av. Siempreviva 742",
-      },
+  // Valores por defecto
+  const data: DNIData = {
+    nombre: "",
+    sexo: "",
+    documento: "",
+    fechaNacimiento: "",
+    domicilio: "",
+    lugarNacimiento: "",
+  }
+
+  // Buscar datos en el texto
+  for (const line of lines) {
+    if (line.includes("Nombre") || line.includes("NOMBRE")) {
+      data.nombre = line.split(":")[1]?.trim() || ""
+    } else if (line.includes("Sexo") || line.includes("SEXO")) {
+      data.sexo = line.split(":")[1]?.trim() || ""
+    } else if (line.includes("DNI") || line.includes("Documento")) {
+      data.documento = line.split(":")[1]?.trim() || ""
+    } else if (line.includes("Nacimiento") || line.includes("NACIMIENTO")) {
+      data.fechaNacimiento = line.split(":")[1]?.trim() || ""
+    } else if (line.includes("Domicilio") || line.includes("DOMICILIO")) {
+      data.domicilio = line.split(":")[1]?.trim() || ""
+    } else if (line.includes("Lugar") && line.includes("Nacimiento")) {
+      data.lugarNacimiento = line.split(":")[1]?.trim() || ""
     }
-  } catch (error) {
-    console.error("Error in mock fetch:", error)
-    return {
-      success: false,
-      error: axios.isAxiosError(error) ? error.message : "Unknown error",
-    }
+  }
+
+  return data
+}
+
+// Mock para pruebas
+export async function mockExtractDNIData(): Promise<ServiceResponse<DNIData>> {
+  await new Promise((resolve) => setTimeout(resolve, 1500))
+
+  return {
+    success: true,
+    data: {
+      nombre: "JUAN CARLOS PEREZ",
+      sexo: "M",
+      documento: "12345678",
+      fechaNacimiento: "01/01/1980",
+      domicilio: "AV. SIEMPREVIVA 742",
+      lugarNacimiento: "BUENOS AIRES",
+    },
   }
 }
 
